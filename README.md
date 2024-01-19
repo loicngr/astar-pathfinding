@@ -1,4 +1,4 @@
-# muzei
+# astar-pathfinding
 
 Custom path finding with A* algo
 
