@@ -288,7 +288,7 @@ class Canvas {
   }
 }
 
-class App {
+export class App {
   grid: Grid
   canvas: Canvas
   loop: Loop
@@ -456,3 +456,5 @@ app.grid.endPos = {
 }
 
 app.start()
+
+window._ctx = app
