@@ -1,5 +1,6 @@
 import { App } from "../main.ts"
 import { Node } from "./grid.ts"
+import Heap from 'heap'
 
 const CACHE: {
   startPos: { x: number, y: number },
@@ -23,18 +24,6 @@ function heuristicsManhattan(
   return d1 + d2
 }
 
-function getLowestNodeIndex(openList: Node[]) {
-  let lowestNodeIndex = 0
-
-  for (let i = 0; i < openList.length; i++) {
-    if (openList[i].f < openList[lowestNodeIndex].f) {
-      lowestNodeIndex = i
-    }
-  }
-
-  return lowestNodeIndex
-}
-
 export function findPath(
   app: App,
   startPos: { x: number, y: number },
@@ -51,7 +40,7 @@ export function findPath(
   CACHE.startPos = { ...startPos }
   CACHE.endPos = { ...endPos }
 
-  const openList: Node[] = [] // TODO: for better perf use hashMap ?
+  const openList: Heap<Node> = new Heap((a: Node, b: Node) => a.f - b.f)
   const path: { x: number, y: number }[] = []
   const startNode = app.grid.getNodeAt(startPos.x, startPos.y)
   const endNode = app.grid.getNodeAt(endPos.x, endPos.y)
@@ -62,13 +51,14 @@ export function findPath(
   openList.push(startNode)
   startNode.opened = true
 
-  while (openList.length > 0) {
+  while (!openList.empty()) {
     // récupérer dans openList, le node avec le plus petit f
-    let nIndex = getLowestNodeIndex(openList) // TODO: perf, index by f ?
-    const n = openList[nIndex]
+    const n = openList.pop()
 
-    // Suppression du node courant dans openList
-    openList.splice(nIndex, 1)
+    if (typeof n === 'undefined') {
+      continue
+    }
+
     n.closed = true
 
     // Le node courant correspond à la destination
@@ -111,8 +101,7 @@ export function findPath(
           successor.opened = true
           app.grid.matrix[successor.pos.y][successor.pos.x].colorIndex = 15
         } else {
-          const successorInOpenListIndex = openList.findIndex((openListNode) => openListNode.pos.x === x && openListNode.pos.y === y)
-          openList.splice(successorInOpenListIndex, 1, successor)
+          openList.updateItem(successor)
         }
       }
     }

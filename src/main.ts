@@ -59,11 +59,19 @@ export class App {
   }
 
   private computePath() {
+    // if (!this.input.justDown('Space')) {
+    //   return
+    // }
+
+    // No Heap (403.32 ms)
+    // Heap (36.72 ms)
+    // console.time('findPath')
     this.computedPath = findPath(
       app,
       app.grid.startPos,
       app.grid.endPos
     )
+    // console.timeEnd('findPath')
   }
 
   private init(): void {

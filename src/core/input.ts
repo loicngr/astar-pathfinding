@@ -34,6 +34,7 @@ export class Input {
       ['ArrowUp', false],
       ['ArrowLeft', false],
       ['ArrowRight', false],
+      ['Space', false],
     ])
   }
 
