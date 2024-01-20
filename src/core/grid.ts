@@ -53,6 +53,10 @@ export class Grid {
     return this.matrix[y][x].walkable
   }
 
+  isInGrid(x: number, y: number) {
+    return (x >= 0 && x < this.width) && (y >= 0 && y < this.height)
+  }
+
   getNodeAt(x: number, y: number) {
     return this.nodes[y][x]
   }

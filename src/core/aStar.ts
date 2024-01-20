@@ -1,6 +1,16 @@
 import { App } from "../main.ts"
 import { Node } from "./grid.ts"
 
+const CACHE: {
+  startPos: { x: number, y: number },
+  endPos: { x: number, y: number },
+  path: {x: number, y: number}[],
+} = {
+  startPos: { x: 0, y: 0 },
+  endPos: { x: 0, y: 0 },
+  path: [],
+}
+
 /**
  * DOC: https://theory.stanford.edu/~amitp/GameProgramming/Heuristics.html
  */
@@ -30,6 +40,17 @@ export function findPath(
   startPos: { x: number, y: number },
   endPos: { x: number, y: number }
 ) {
+  if (
+    CACHE.startPos.x === startPos.x &&
+    CACHE.startPos.y === startPos.y &&
+    CACHE.endPos
+  ) {
+    return CACHE.path
+  }
+
+  CACHE.startPos = { ...startPos }
+  CACHE.endPos = { ...endPos }
+
   const openList: Node[] = [] // TODO: for better perf use hashMap ?
   const path: { x: number, y: number }[] = []
   const startNode = app.grid.getNodeAt(startPos.x, startPos.y)
@@ -60,7 +81,8 @@ export function findPath(
         temp = temp.parent
       }
 
-      return path.reverse()
+      CACHE.path = path.reverse()
+      return CACHE.path
     }
 
     const successors = app.grid.getSuccessors(n)

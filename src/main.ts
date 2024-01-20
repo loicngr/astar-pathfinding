@@ -3,13 +3,22 @@ import { Grid } from "./core/grid.ts"
 import { Canvas } from "./core/canvas.ts"
 import { Loop } from "./core/loop.ts"
 import { Api } from "./core/api.ts"
-import {findPath} from "./core/aStar.ts";
+import { findPath } from "./core/aStar.ts"
+import { Input } from "./core/input.ts"
+import throttle from 'lodash/fp/throttle'
+
+interface ThrottleFn<T extends () => unknown> {
+  (...args: Parameters<T>): ReturnType<T> | undefined
+}
 
 export class App {
   grid: Grid
   canvas: Canvas
   loop: Loop
   api: Api
+  input: Input
+  computedPath: {x: number, y: number}[] = []
+  throttlePathCompute?: ThrottleFn<() => void>
 
   constructor() {
     this.grid = new Grid()
@@ -30,6 +39,7 @@ export class App {
         scaleFactor: this.canvas.scaleFactor
       }
     })
+    this.input = new Input()
   }
 
   start() {
@@ -48,34 +58,73 @@ export class App {
     this.loop.start()
   }
 
+  private computePath() {
+    this.computedPath = findPath(
+      app,
+      app.grid.startPos,
+      app.grid.endPos
+    )
+  }
+
   private init(): void {
     console.log('game init')
+    this.throttlePathCompute = throttle(500, this.computePath)
   }
 
   private update(_interval: number): void {
-    // console.log('game update')
+    if (
+      this.input.justDown('ArrowDown') &&
+      this.grid.isInGrid(this.grid.startPos.x, this.grid.startPos.y + 1) &&
+      this.grid.isWalkableAt(this.grid.startPos.x, this.grid.startPos.y + 1)
+    ) {
+      this.grid.startPos.y += 1
+    }
+
+    if (
+      this.input.justDown('ArrowUp') &&
+      this.grid.isInGrid(this.grid.startPos.x, this.grid.startPos.y - 1) &&
+      this.grid.isWalkableAt(this.grid.startPos.x, this.grid.startPos.y - 1)
+    ) {
+      this.grid.startPos.y -= 1
+    }
+
+    if (
+      this.input.justDown('ArrowLeft') &&
+      this.grid.isInGrid(this.grid.startPos.x - 1, this.grid.startPos.y) &&
+      this.grid.isWalkableAt(this.grid.startPos.x - 1, this.grid.startPos.y)
+    ) {
+      this.grid.startPos.x -= 1
+    }
+
+    if (
+      this.input.justDown('ArrowRight') &&
+      this.grid.isInGrid(this.grid.startPos.x + 1, this.grid.startPos.y) &&
+      this.grid.isWalkableAt(this.grid.startPos.x + 1, this.grid.startPos.y)
+    ) {
+      this.grid.startPos.x += 1
+    }
   }
 
   private render(_delta: number): void {
     this.api.clearScreen(2)
     this.api.map(0, 0, 0, 0, 16, 16)
 
-    const path = findPath(
-      app,
-      app.grid.startPos,
-      app.grid.endPos
-    )
+    if (app.grid.startPos.x !== app.grid.endPos.x || app.grid.startPos.y !== app.grid.endPos.y) {
+      if (typeof this.throttlePathCompute === 'function') {
+        this.throttlePathCompute()
+      }
 
-    // draw path
-    path.forEach((p) => {
-      this.api.drawTileRec(
-        14,
-        16,
-        16,
-        p.x,
-        p.y
-      )
-    })
+      // draw path
+      this.computedPath.forEach((p) => {
+        this.api.drawTileRec(
+          14,
+          16,
+          16,
+          p.x,
+          p.y
+        )
+      })
+    }
 
     // startPos
     this.api.drawTileRec(
