@@ -1,3 +1,5 @@
+import {GridConstruct} from "../interfaces/grid.ts";
+
 export class Node {
   public f: number // Résultat de h + g
 
@@ -16,24 +18,34 @@ export class Node {
 }
 
 export class Grid {
-  private _matrix: { walkable: boolean, colorIndex: number }[][]
-  public nodes: Node[][]
-  public width: number = 0
-  public height: number = 0
-  public startPos: { x: number, y: number } = {x: 0, y: 0}
-  public endPos: { x: number, y: number } = {x: 0, y: 0}
+  public tileSize: number = 16
 
-  constructor(public tileSize: number = 16) {
-    this._matrix = []
-    this.nodes = this._buildNodes()
+  constructor(
+    public matrix: GridConstruct['matrix'] = [],
+    public nodes: GridConstruct['nodes'] = [],
+    public width: GridConstruct['width'] = 0,
+    public height: GridConstruct['height'] = 0,
+    public startPos: GridConstruct['startPos'] = {x: 0, y: 0},
+    public endPos: GridConstruct['endPos'] = {x: 0, y: 0}
+  ) {
+    if (this.nodes.length === 0) {
+      this.nodes = this._buildNodes()
+    }
   }
 
-  get matrix(): { walkable: boolean, colorIndex: number }[][] {
-    return this._matrix
+  static fromObj(payload: GridConstruct) {
+    return new Grid(
+      payload.matrix,
+      payload.nodes,
+      payload.width,
+      payload.height,
+      payload.startPos,
+      payload.endPos
+    )
   }
 
-  set matrix(value: { walkable: boolean, colorIndex: number }[][]) {
-    this._matrix = value
+  defineMatrix(value: { walkable: boolean, colorIndex: number }[][]) {
+    this.matrix = value
 
     this.height = value.length
     this.width = value[0].length

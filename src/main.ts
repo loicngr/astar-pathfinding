@@ -3,13 +3,10 @@ import { Grid } from "./core/grid.ts"
 import { Canvas } from "./core/canvas.ts"
 import { Loop } from "./core/loop.ts"
 import { Api } from "./core/api.ts"
-import { findPath } from "./core/aStar.ts"
 import { Input } from "./core/input.ts"
-import throttle from 'lodash/fp/throttle'
-
-interface ThrottleFn<T extends () => unknown> {
-  (...args: Parameters<T>): ReturnType<T> | undefined
-}
+import Worker from './core/worker.ts?worker'
+import { WORKER_COMPUTE_PATH_KEY } from "./index.ts"
+import { type WorkerPayload } from "./interfaces/worker.ts"
 
 export class App {
   grid: Grid
@@ -18,7 +15,7 @@ export class App {
   api: Api
   input: Input
   computedPath: {x: number, y: number}[] = []
-  throttlePathCompute?: ThrottleFn<() => void>
+  worker: Worker
 
   constructor() {
     this.grid = new Grid()
@@ -30,6 +27,7 @@ export class App {
       scale: 3
     })
 
+    this.worker =  new Worker()
     this.loop = new Loop()
     this.api = new Api({
       canvas: this.canvas.canvas,
@@ -42,7 +40,26 @@ export class App {
     this.input = new Input()
   }
 
+  onWorkerMessage(e: MessageEvent<unknown>) {
+    const payload: WorkerPayload = e.data as WorkerPayload
+
+    switch (payload.key) {
+      case WORKER_COMPUTE_PATH_KEY:
+        const path = payload.data as {x: number, y: number}[]
+        this.computedPath = path
+        break
+      default:
+        break
+    }
+  }
+
+  postWorkerMessage(payload: Partial<WorkerPayload>) {
+    this.worker.postMessage(JSON.stringify(payload))
+  }
+
   start() {
+    this.worker.onmessage = this.onWorkerMessage.bind(this)
+
     this.loop.on('init', () => {
       this.init()
     }, this)
@@ -58,25 +75,8 @@ export class App {
     this.loop.start()
   }
 
-  private computePath() {
-    // if (!this.input.justDown('Space')) {
-    //   return
-    // }
-
-    // No Heap (403.32 ms)
-    // Heap (36.72 ms)
-    // console.time('findPath')
-    this.computedPath = findPath(
-      app,
-      app.grid.startPos,
-      app.grid.endPos
-    )
-    // console.timeEnd('findPath')
-  }
-
   private init(): void {
     console.log('game init')
-    this.throttlePathCompute = throttle(500, this.computePath)
   }
 
   private update(_interval: number): void {
@@ -118,9 +118,12 @@ export class App {
     this.api.map(0, 0, 0, 0, 16, 16)
 
     if (app.grid.startPos.x !== app.grid.endPos.x || app.grid.startPos.y !== app.grid.endPos.y) {
-      if (typeof this.throttlePathCompute === 'function') {
-        this.throttlePathCompute()
-      }
+      this.postWorkerMessage({
+        key: WORKER_COMPUTE_PATH_KEY,
+        data: {
+          grid: app.grid,
+        }
+      })
 
       // draw path
       this.computedPath.forEach((p) => {
@@ -155,7 +158,8 @@ export class App {
 }
 
 const app = new App()
-app.grid.matrix = [
+
+app.grid.defineMatrix([
   [
     {walkable: true, colorIndex: 7},
     {walkable: true, colorIndex: 7},
@@ -252,7 +256,7 @@ app.grid.matrix = [
     {walkable: true, colorIndex: 7},
     {walkable: true, colorIndex: 7}
   ]
-]
+])
 
 app.grid.startPos = {
   x: 1,

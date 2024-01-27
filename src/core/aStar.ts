@@ -1,5 +1,4 @@
-import { App } from "../main.ts"
-import { Node } from "./grid.ts"
+import { Grid, Node } from "./grid.ts"
 import Heap from 'heap'
 
 const CACHE: {
@@ -25,7 +24,7 @@ function heuristicsManhattan(
 }
 
 export function findPath(
-  app: App,
+  appGrid: Grid,
   startPos: { x: number, y: number },
   endPos: { x: number, y: number }
 ) {
@@ -42,8 +41,9 @@ export function findPath(
 
   const openList: Heap<Node> = new Heap((a: Node, b: Node) => a.f - b.f)
   const path: { x: number, y: number }[] = []
-  const startNode = app.grid.getNodeAt(startPos.x, startPos.y)
-  const endNode = app.grid.getNodeAt(endPos.x, endPos.y)
+
+  const startNode = appGrid.getNodeAt(startPos.x, startPos.y)
+  const endNode = appGrid.getNodeAt(endPos.x, endPos.y)
 
   startNode.g = 0
   startNode.f = 0
@@ -75,7 +75,7 @@ export function findPath(
       return CACHE.path
     }
 
-    const successors = app.grid.getSuccessors(n)
+    const successors = appGrid.getSuccessors(n)
 
     for (let i = 0, l = successors.length; i < l; ++i) {
       const successor = successors[i]
@@ -99,7 +99,6 @@ export function findPath(
         if (!successor.opened) {
           openList.push(successor)
           successor.opened = true
-          app.grid.matrix[successor.pos.y][successor.pos.x].colorIndex = 15
         } else {
           openList.updateItem(successor)
         }
